@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* Tambahan dikit agar tampilan peta Leaflet menyatu sempurna tanpa bug garis putih */
+.leaflet-container {
+  font-family: inherit;
+}

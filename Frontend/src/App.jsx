@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, GeoJSON, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Search, Sliders, Layers, Users, MapPin } from 'lucide-react';
+import { Search, Sliders, Layers, Users, MapPin, Trash2 } from 'lucide-react';
 
 import 'leaflet/dist/leaflet.css';
 
@@ -186,7 +186,7 @@ export default function App() {
 
               {/* FORM KHUSUS ADMIN UNTUK TAMBAH TITIK */}
               {role === 'admin' && (
-                <div className="p-4 mx-5 mb-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-3 shadow-sm">
+                <div className="p-4 mx-1 mt-2 bg-amber-50 border border-amber-200 rounded-2xl space-y-3 shadow-sm">
                   <div className="text-xs font-bold text-amber-800 uppercase tracking-wider">🛠️ Panel Admin: Tambah Lokasi</div>
                   <input 
                     type="text" placeholder="Nama Tempat" value={newSpot.name}
@@ -219,19 +219,40 @@ export default function App() {
                     onClick={() => {
                       if(!newSpot.name || !newSpot.lat || !newSpot.lon) return alert("Nama, Lat, dan Lon wajib diisi!");
                       
-                      // Kirim data ke Backend
+                      // KUNCI PERBAIKAN: Format data sebelum diubah ke JSON
+                      const payloadData = {
+                        name: newSpot.name,
+                        address: newSpot.address || "-",
+                        capacity: parseInt(newSpot.capacity) || 0, // Ubah string ke Integer
+                        lat: parseFloat(newSpot.lat),              // Ubah string ke Float
+                        lon: parseFloat(newSpot.lon),              // Ubah string ke Float
+                        category_id: 1, // ID Relasi Default Wajib
+                        rate_id: 1,     // ID Relasi Default Wajib
+                        admin_id: 1     // ID Relasi Default Wajib
+                      };
+                      
                       fetch(`${API_URL}/parkir`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(newSpot)
+                        body: JSON.stringify(payloadData)
                       })
-                      .then(res => res.json())
+                      .then(async (res) => {
+                        // Tambahkan jebakan error 422 agar tidak alert sukses palsu lagi
+                        if (!res.ok) {
+                          const errData = await res.json();
+                          throw new Error(JSON.stringify(errData.detail || errData));
+                        }
+                        return res.json();
+                      })
                       .then(() => {
                         alert("Lokasi parkir baru berhasil ditambahkan ke PostGIS!");
                         setNewSpot({ name: '', address: '', capacity: '', lat: '', lon: '' });
-                        fetchAllParking(); // Refresh peta otomatis
+                        fetchAllParking(); // Langsung update sidebar & Peta
                       })
-                      .catch(err => console.error(err));
+                      .catch(err => {
+                        console.error("Error Detail:", err);
+                        alert(`Gagal menyimpan data: \n${err.message}`);
+                      });
                     }}
                     className="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-colors shadow"
                   >
@@ -290,9 +311,43 @@ export default function App() {
                     )}
                   </div>
                   
-                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50/50 px-2.5 py-1 rounded-lg">
-                    Kapasitas: {spot.capacity}
-                  </span>
+                  {/* FIX INTERACTIVE: Toggle Tombol Hapus (Admin) atau Kapasitas (User) */}
+                  {role === 'admin' ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // Mencegah peta ikut berpindah posisi saat mengklik tombol hapus
+                        if (window.confirm(`Apakah kamu yakin ingin menghapus "${spot.name}" dari database PostGIS?`)) {
+                          fetch(`${API_URL}/parkir/${spot.id}`, {
+                            method: 'DELETE',
+                          })
+                          .then(async res => {
+                            if (!res.ok) throw new Error("Gagal menghapus data dari server");
+                            return res.json();
+                          })
+                          .then(() => {
+                            alert("Data sukses dihapus dari database!");
+                            if (filterType === 'Terdekat') {
+                              fetchNearestParking(userLocation[1], userLocation[0], radius);
+                            } else {
+                              fetchAllParking();
+                            }
+                          })
+                          .catch(err => {
+                            console.error("Gagal menghapus data:", err);
+                            alert(err.message);
+                          });
+                        }
+                      }}
+                      className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg border border-red-200 transition-all shadow-sm flex items-center justify-center"
+                      title="Hapus lokasi ini"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50/50 px-2.5 py-1 rounded-lg">
+                      Kapasitas: {spot.capacity}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}

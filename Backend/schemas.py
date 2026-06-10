@@ -26,10 +26,10 @@ class RateResponse(BaseModel):
 class ParkingLocationCreate(BaseModel):
     name: str
     address: Optional[str] = None
-    category_id: int
-    rate_id: int
+    category_id: Optional[int] = 1  # Diberi default agar opsional
+    rate_id: Optional[int] = 1      # Diberi default agar opsional
     admin_id: Optional[int] = None
-    capacity: int
+    capacity: Optional[int] = 0     # Diberi default agar opsional
     lon: float  # Koordinat Bujur dari peta
     lat: float  # Koordinat Lintang dari peta
 

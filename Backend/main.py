@@ -4,7 +4,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import json
 from typing import Optional
-import traceback # Tambahkan ini di bagian atas jika belum ada
+import traceback
 
 import schemas
 
@@ -17,20 +17,20 @@ app = FastAPI(
 # Aktifkan CORS agar frontend (HTML/Vue/React) bisa memanggil API ini
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Ganti dengan domain frontend saat production
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Fungsi Koneksi Database (Sesuaikan dengan kredensial PostgreSQL kamu)
+# Fungsi Koneksi Database
 def get_db_connection():
     try:
         conn = psycopg2.connect(
             host="localhost",
-            database="ParkirBandung", # Sesuaikan nama DB tubesmu
+            database="ParkirBandung", 
             user="postgres",               
-            password="falihfaiqf666",          # Sesuaikan password-mu
+            password="falihfaiqf666",          
             cursor_factory=RealDictCursor
         )
         return conn
@@ -91,13 +91,12 @@ def get_all_parking_locations():
         raise HTTPException(status_code=500, detail="Database Server Offline")
     cur = conn.cursor()
     
-    # FIX: Kita hapus JOIN ke tabel categories karena kolom c.name tidak tersedia di DB kamu.
+    # Kolom p.capacity dihapus dari query karena tidak ada di tabel database
     query = """
         SELECT 
             p.id, 
             p.name, 
             p.address, 
-            p.capacity,
             ST_AsGeoJSON(p.geom) AS geom_json
         FROM public.parking_locations p;
     """
@@ -108,21 +107,17 @@ def get_all_parking_locations():
         features = []
         for row in rows:
             try:
-                # Mendukung cursor tipe Dictionary maupun Tuple (Urutan Angka)
                 if isinstance(row, dict):
                     p_id = row.get('id')
                     p_name = row.get('name')
                     p_address = row.get('address')
-                    p_capacity = row.get('capacity')
                     p_geom = row.get('geom_json')
                 else:
                     p_id = row[0]
                     p_name = row[1]
                     p_address = row[2]
-                    p_capacity = row[3]
-                    p_geom = row[4] # Indeks bergeser ke 4 karena kolom c.name dihapus
+                    p_geom = row[3]
 
-                # Melewati baris data jika tidak memiliki komponen spasial (koordinat)
                 if p_geom is None:
                     continue
                     
@@ -135,8 +130,8 @@ def get_all_parking_locations():
                         "id": p_id,
                         "name": p_name if p_name else "Lahan Parkir",
                         "address": p_address if p_address else "Bandung",
-                        "capacity": p_capacity if p_capacity else "Tersedia",
-                        "category": "Umum", # Diset default "Umum" agar aman dan konsisten
+                        "capacity": "Tersedia", # Fallback manual agar frontend tidak error
+                        "category": "Umum", 
                         "tarif_per_jam": 3000 
                     },
                     "geometry": p_geom
@@ -171,10 +166,10 @@ def get_nearest_parking(
     if not conn: raise HTTPException(status_code=500, detail="Database Offline")
     cur = conn.cursor()
     
-    # PERBAIKAN: Menghapus r.vehicle_type dan r.hourly_rate dari query karena tabel rates tidak ada
+    # Kolom p.capacity dihapus dari query
     query = """
         SELECT 
-            p.id, p.name, p.address, p.capacity,
+            p.id, p.name, p.address,
             ST_Distance(p.geom::geography, ST_MakePoint(%s, %s)::geography) AS jarak_meter,
             ST_AsGeoJSON(p.geom)::json AS geom_json
         FROM public.parking_locations p
@@ -193,9 +188,9 @@ def get_nearest_parking(
                     "id": row['id'],
                     "name": row['name'],
                     "address": row['address'],
-                    "capacity": row['capacity'],
+                    "capacity": "Tersedia", # Fallback manual
                     "jarak_meter": round(row['jarak_meter'], 2),
-                    "tarif_per_jam": 3000 # Fallback default value
+                    "tarif_per_jam": 3000 
                 },
                 "geometry": row['geom_json']
             }
@@ -217,20 +212,78 @@ def create_parking_location(payload: schemas.ParkingLocationCreate):
     if not conn: raise HTTPException(status_code=500, detail="Database Offline")
     cur = conn.cursor()
     
+    # Query disederhanakan: Hanya memasukkan kolom name, address, dan geom yang ada di tabel DB
     query = """
-        INSERT INTO public.parking_locations (name, address, category_id, rate_id, admin_id, capacity, geom)
-        VALUES (%s, %s, %s, %s, %s, %s, ST_SetSRID(ST_MakePoint(%s, %s), 4326))
+        INSERT INTO public.parking_locations (name, address, geom)
+        VALUES (%s, %s, ST_SetSRID(ST_MakePoint(%s, %s), 4326))
         RETURNING id;
     """
     try:
         cur.execute(query, (
-            payload.name, payload.address, payload.category_id, 
-            payload.rate_id, payload.admin_id, payload.capacity,
+            payload.name, payload.address,
             payload.lon, payload.lat
         ))
         new_id = cur.fetchone()['id']
         conn.commit()
         return {"status": "Sukses", "message": "Titik parkir baru berhasil ditambahkan", "id": new_id}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+# ==========================================
+# ENDPOINT 5: UPDATE DATA PARKIR (UBAH)
+# ==========================================
+@app.put("/api/parkir/{parkir_id}")
+def update_parking_location(parkir_id: int, payload: schemas.ParkingLocationCreate):
+    conn = get_db_connection()
+    if not conn: raise HTTPException(status_code=500, detail="Database Offline")
+    cur = conn.cursor()
+    
+    # Query disederhanakan: Menghapus kolom category_id, rate_id, admin_id, dan capacity
+    query = """
+        UPDATE public.parking_locations 
+        SET name = %s, address = %s, geom = ST_SetSRID(ST_MakePoint(%s, %s), 4326)
+        WHERE id = %s;
+    """
+    try:
+        cur.execute(query, (
+            payload.name, payload.address, 
+            payload.lon, payload.lat, parkir_id
+        ))
+        
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Data parkir tidak ditemukan")
+            
+        conn.commit()
+        return {"status": "Sukses", "message": f"Data parkir ID {parkir_id} berhasil diperbarui"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+# ==========================================
+# ENDPOINT 6: DELETE DATA PARKIR (HAPUS)
+# ==========================================
+@app.delete("/api/parkir/{parkir_id}")
+def delete_parking_location(parkir_id: int):
+    conn = get_db_connection()
+    if not conn: raise HTTPException(status_code=500, detail="Database Offline")
+    cur = conn.cursor()
+    
+    query = "DELETE FROM public.parking_locations WHERE id = %s;"
+    try:
+        cur.execute(query, (parkir_id,))
+        
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Data parkir tidak ditemukan")
+            
+        conn.commit()
+        return {"status": "Sukses", "message": f"Data parkir ID {parkir_id} berhasil dihapus"}
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=400, detail=str(e))

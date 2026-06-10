@@ -1,6 +1,17 @@
 from pydantic import BaseModel
 from typing import List, Optional, Any, Dict
 
+# Schema untuk Admin Login
+class AdminLogin(BaseModel):
+    username: str
+    password: str
+
+class AdminSession(BaseModel):
+    id: int
+    username: str
+    full_name: Optional[str] = None
+    token: str
+
 # Schema untuk Admin
 class AdminBase(BaseModel):
     username: str
@@ -13,25 +24,25 @@ class AdminResponse(AdminBase):
     class Config:
         from_attributes = True
 
-# Schema untuk Tarif (Rates)
-class RateResponse(BaseModel):
-    id: int
-    vehicle_type: str
-    hourly_rate: float
-    max_rate: Optional[float] = None
-    class Config:
-        from_attributes = True
-
-# Schema Input Lokasi Parkir Baru (Dari Frontend Admin)
+# Schema Input Lokasi Parkir Baru (Dari Frontend Admin) - LENGKAP
 class ParkingLocationCreate(BaseModel):
     name: str
     address: Optional[str] = None
-    category_id: Optional[int] = 1  # Diberi default agar opsional
-    rate_id: Optional[int] = 1      # Diberi default agar opsional
-    admin_id: Optional[int] = None
-    capacity: Optional[int] = 0     # Diberi default agar opsional
-    lon: float  # Koordinat Bujur dari peta
-    lat: float  # Koordinat Lintang dari peta
+    capacity: Optional[int] = 0
+    price_rate: Optional[int] = 3000
+    status: Optional[str] = "Open"
+    category_id: Optional[int] = 1
+    admin_id: Optional[int] = 1
+    lat: float
+    lon: float
+
+# Schema untuk Categories (dropdown)
+class CategoryResponse(BaseModel):
+    id: int
+    type_name: str
+    description: Optional[str] = None
+    class Config:
+        from_attributes = True
 
 # Schema GeoJSON Standar untuk Output Peta Frontend
 class GeoJSONFeature(BaseModel):

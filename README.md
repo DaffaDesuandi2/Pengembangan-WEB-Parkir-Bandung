@@ -27,6 +27,7 @@ Melalui aplikasi ini, pengguna dapat melihat sebaran lokasi parkir publik pada p
 * Mengurutkan parkir berdasarkan jarak terdekat
 * Mengelola data parkir melalui fitur tambah, ubah, dan hapus data
 * Melihat sebaran lokasi parkir berdasarkan wilayah kecamatan
+* Sistem login administrator untuk pengelolaan data
 
 ## Teknologi yang Digunakan
 
@@ -68,11 +69,8 @@ Pengembangan-WEB-Parkir-Bandung/
 │
 ├── Backend/
 │   ├── main.py
-│   ├── schema.py
-│   ├── routes/
-│   │   └── parkir.py
-│   ├── requirements.txt
-│   └── .env.example
+│   ├── schemas.py
+│   └── requirements.txt
 │
 ├── Frontend/
 │   ├── public/
@@ -109,13 +107,13 @@ Sebelum menjalankan aplikasi, pastikan perangkat sudah memiliki:
 Buat database baru di PostgreSQL:
 
 ```sql
-CREATE DATABASE parkir_bandung;
+CREATE DATABASE "Tubes_SIG";
 ```
 
 Masuk ke database tersebut, lalu aktifkan ekstensi PostGIS:
 
 ```sql
-\c parkir_bandung
+\c "Tubes_SIG"
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 ```
@@ -123,22 +121,8 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 Jalankan file SQL yang tersedia:
 
 ```bash
-psql -U postgres -d parkir_bandung -f database/database_parkir_bandung.sql
+psql -U postgres -d "Tubes_SIG" -f database/database_parkir_bandung.sql
 ```
-
-Untuk memastikan tabel berhasil dibuat, jalankan:
-
-```sql
-SELECT table_name 
-FROM information_schema.tables
-WHERE table_schema = 'public';
-```
-
-Tabel utama yang digunakan:
-
-* `titik_parkir`
-* `pengelola`
-* `wilayah_kecamatan`
 
 ## Setup Backend
 
@@ -164,12 +148,6 @@ Install dependensi:
 
 ```bash
 pip install -r requirements.txt
-```
-
-Buat file `.env` berdasarkan `.env.example`, lalu isi konfigurasi database:
-
-```env
-DATABASE_URL=postgresql://postgres:password@localhost:5432/parkir_bandung
 ```
 
 Jalankan server FastAPI:
@@ -204,12 +182,6 @@ Install dependensi:
 npm install
 ```
 
-Buat file `.env` berdasarkan `.env.example`, lalu isi:
-
-```env
-VITE_API_BASE_URL=http://localhost:8000
-```
-
 Jalankan frontend:
 
 ```bash
@@ -231,47 +203,51 @@ http://localhost:5173
 | GET    | `/api/parkir/terdekat` | Mencari parkir terdekat berdasarkan koordinat dan radius |
 | PUT    | `/api/parkir/{id}`     | Mengubah data parkir                                     |
 | DELETE | `/api/parkir/{id}`     | Menghapus data parkir                                    |
+| GET    | `/api/kecamatan`       | Mengambil batas wilayah kecamatan                         |
+| GET    | `/api/categories`      | Mengambil daftar kategori kendaraan                       |
+| POST   | `/api/admin/login`     | Login administrator                                       |
 
 Contoh pencarian parkir terdekat:
 
 ```text
-GET /api/parkir/terdekat?lat=-6.9175&lon=107.6191&radius=500
+GET /api/parkir/terdekat?lat=-6.9175&lon=107.6191&radius_meter=1000
 ```
 
 Parameter:
 
-| Parameter | Tipe  | Keterangan                   |
-| --------- | ----- | ---------------------------- |
-| lat       | float | Latitude posisi pengguna     |
-| lon       | float | Longitude posisi pengguna    |
-| radius    | int   | Radius pencarian dalam meter |
+| Parameter     | Tipe  | Keterangan                   |
+| ------------- | ----- | ---------------------------- |
+| lat           | float | Latitude posisi pengguna     |
+| lon           | float | Longitude posisi pengguna    |
+| radius_meter  | int   | Radius pencarian dalam meter |
 
 ## Skema Database
 
-### Tabel `titik_parkir`
+### Tabel `parking_locations`
 
 Menyimpan data lokasi parkir.
 
 | Kolom        | Tipe                  | Keterangan                |
 | ------------ | --------------------- | ------------------------- |
 | id           | SERIAL PK             | ID parkir                 |
-| nama_lokasi  | VARCHAR               | Nama lokasi parkir        |
-| alamat       | TEXT                  | Alamat lokasi             |
-| kapasitas    | INTEGER               | Kapasitas parkir          |
-| tarif        | INTEGER               | Tarif parkir              |
-| id_pengelola | INTEGER FK            | Relasi ke tabel pengelola |
+| name         | VARCHAR               | Nama lokasi parkir        |
+| address      | TEXT                  | Alamat lokasi             |
+| capacity     | INTEGER               | Kapasitas parkir          |
+| price_rate   | INTEGER               | Tarif parkir per jam       |
+| status       | VARCHAR               | Status (Open/Closed/Full) |
+| category_id  | INTEGER FK            | Relasi ke tabel kategori  |
+| admin_id     | INTEGER FK            | Relasi ke tabel admin     |
 | geom         | GEOMETRY(Point, 4326) | Koordinat lokasi          |
 
-### Tabel `pengelola`
+### Tabel `categories`
 
-Menyimpan data pengelola parkir.
+Menyimpan kategori jenis kendaraan.
 
-| Kolom          | Tipe      | Keterangan       |
-| -------------- | --------- | ---------------- |
-| id             | SERIAL PK | ID pengelola     |
-| nama_pengelola | VARCHAR   | Nama pengelola   |
-| kontak         | VARCHAR   | Kontak pengelola |
-| jenis_instansi | VARCHAR   | Jenis instansi   |
+| Kolom        | Tipe      | Keterangan       |
+| ------------ | --------- | ---------------- |
+| id           | SERIAL PK | ID kategori      |
+| type_name    | VARCHAR   | Nama jenis       |
+| description  | TEXT      | Deskripsi kategori |
 
 ### Tabel `wilayah_kecamatan`
 
@@ -281,8 +257,19 @@ Menyimpan data wilayah kecamatan.
 | -------------- | ----------------------- | ----------------------- |
 | id             | SERIAL PK               | ID kecamatan            |
 | nama_kecamatan | VARCHAR                 | Nama kecamatan          |
-| luas_area      | FLOAT                   | Luas wilayah            |
 | geom           | GEOMETRY(Polygon, 4326) | Batas wilayah kecamatan |
+
+### Tabel `admins`
+
+Menyimpan data administrator sistem.
+
+| Kolom       | Tipe      | Keterangan       |
+| ----------- | --------- | ---------------- |
+| id          | SERIAL PK | ID admin         |
+| username    | VARCHAR   | Username login   |
+| password    | VARCHAR   | Password (hash)   |
+| full_name   | VARCHAR   | Nama lengkap     |
+| last_login  | TIMESTAMP | Waktu login terakhir |
 
 ## Contoh Query Spasial
 
@@ -291,14 +278,14 @@ Query berikut digunakan untuk mencari lokasi parkir dalam radius 500 meter dari 
 ```sql
 SELECT 
     id,
-    nama_lokasi,
-    tarif,
-    kapasitas,
+    name,
+    price_rate,
+    capacity,
     ST_Distance(
         geom::geography,
         ST_MakePoint(107.6191, -6.9175)::geography
     ) AS jarak_meter
-FROM titik_parkir
+FROM parking_locations
 WHERE ST_DWithin(
     geom::geography,
     ST_MakePoint(107.6191, -6.9175)::geography,
@@ -309,8 +296,7 @@ ORDER BY jarak_meter ASC;
 
 ## Referensi
 
-* PostGIS Documentation
-* Leaflet.js Documentation
-* FastAPI Documentation
-* Data Lokasi Parkir Off-Street Kota Bandung — Dishub Bandung
-* OpenStreetMap
+* [PostGIS Documentation](https://postgis.net/documentation/)
+* [Leaflet.js Documentation](https://leafletjs.com/)
+* [FastAPI Documentation](https://fastapi.tiangolo.com/)
+* [OpenStreetMap](https://www.openstreetmap.org/)

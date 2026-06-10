@@ -6,7 +6,7 @@
 
 ## Tim Pengembang
 
-Proyek ini dikembangkan oleh mahasiswa **Teknik Informatika — Institut Teknologi Sumatera (ITERA)** Angkatan 2023.
+Proyek ini dikembangkan oleh mahasiswa Teknik Informatika — Institut Teknologi Sumatera (ITERA) Angkatan 2023.
 
 | Nama | NIM |
 |---|---|
@@ -17,7 +17,7 @@ Proyek ini dikembangkan oleh mahasiswa **Teknik Informatika — Institut Teknolo
 
 ---
 
-## 📌 Tentang Proyek
+## Tentang Proyek
 
 Proyek ini dikembangkan sebagai respons atas permasalahan parkir liar yang tidak terkendali di Kota Bandung. Banyak pengendara parkir sembarangan karena tidak mengetahui lokasi kantong parkir resmi terdekat.
 
@@ -27,12 +27,12 @@ Solusinya adalah WebGIS yang menampilkan sebaran titik parkir resmi di seluruh w
 
 ## Fitur Utama
 
-- 🗺️ **Peta Interaktif** — Visualisasi titik parkir resmi di atas peta OpenStreetMap menggunakan Leaflet.js
-- 📍 **Popup Informasi** — Klik marker untuk melihat nama lokasi, alamat, tarif, dan kapasitas parkir
-- 🔍 **Pencarian Radius** — Cari parkir dalam radius tertentu (misal: 500 m) dari posisi pengguna saat ini menggunakan fungsi spasial `ST_DWithin`
-- 📏 **Parkir Terdekat** — Urutkan lokasi parkir berdasarkan jarak menggunakan `ST_Distance`
-- ⚙️ **CRUD Admin** — Tambah, ubah, dan hapus data parkir melalui form modal
-- 🏘️ **Filter Wilayah** — Analisis sebaran parkir per kecamatan
+- **Peta Interaktif** — Visualisasi titik parkir resmi di atas peta OpenStreetMap menggunakan Leaflet.js
+- **Popup Informasi** — Klik marker untuk melihat nama lokasi, alamat, tarif, dan kapasitas parkir
+- **Pencarian Radius** — Cari parkir dalam radius tertentu (misal: 500 m) dari posisi pengguna saat ini menggunakan fungsi spasial `ST_DWithin`
+- **Parkir Terdekat** — Urutkan lokasi parkir berdasarkan jarak menggunakan `ST_Distance`
+- **CRUD Admin** — Tambah, ubah, dan hapus data parkir melalui form modal
+- **Filter Wilayah** — Analisis sebaran parkir per kecamatan
 
 ---
 

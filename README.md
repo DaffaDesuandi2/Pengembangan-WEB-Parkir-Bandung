@@ -65,7 +65,7 @@ Solusinya adalah WebGIS yang menampilkan sebaran titik parkir resmi di seluruh w
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Lapisan | Teknologi | Keterangan |
 |---|---|---|
@@ -78,7 +78,7 @@ Solusinya adalah WebGIS yang menampilkan sebaran titik parkir resmi di seluruh w
 
 ---
 
-## 📁 Struktur Folder
+## Struktur Folder
 
 ```
 Pengembangan-WEB-Parkir-Bandung/

@@ -77,11 +77,16 @@ Pengembangan-WEB-Parkir-Bandung/
 ├── Frontend/
 │   ├── public/
 │   ├── src/
-│   │   ├── components/
-│   │   ├── services/
+│   │   ├── App.css
 │   │   ├── App.jsx
+│   │   ├── index.css
 │   │   └── main.jsx
+│   ├── index.html
+│   ├── package-lock.json
 │   ├── package.json
+│   ├── postcss.config.js
+│   ├── tailwind.config.js
+│   ├── vite.config.js
 │   └── .env.example
 │
 ├── database/

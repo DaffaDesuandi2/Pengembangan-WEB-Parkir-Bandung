@@ -237,3 +237,62 @@ def create_parking_location(payload: schemas.ParkingLocationCreate):
     finally:
         cur.close()
         conn.close()
+
+# ==========================================
+# ENDPOINT 5: UPDATE DATA PARKIR (UBAH)
+# ==========================================
+@app.put("/api/parkir/{parkir_id}")
+def update_parking_location(parkir_id: int, payload: schemas.ParkingLocationCreate):
+    conn = get_db_connection()
+    if not conn: raise HTTPException(status_code=500, detail="Database Offline")
+    cur = conn.cursor()
+    
+    query = """
+        UPDATE public.parking_locations 
+        SET name = %s, address = %s, category_id = %s, rate_id = %s, admin_id = %s, capacity = %s,
+            geom = ST_SetSRID(ST_MakePoint(%s, %s), 4326)
+        WHERE id = %s;
+    """
+    try:
+        cur.execute(query, (
+            payload.name, payload.address, payload.category_id, 
+            payload.rate_id, payload.admin_id, payload.capacity,
+            payload.lon, payload.lat, parkir_id
+        ))
+        
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Data parkir tidak ditemukan")
+            
+        conn.commit()
+        return {"status": "Sukses", "message": f"Data parkir ID {parkir_id} berhasil diperbarui"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+# ==========================================
+# ENDPOINT 6: DELETE DATA PARKIR (HAPUS)
+# ==========================================
+@app.delete("/api/parkir/{parkir_id}")
+def delete_parking_location(parkir_id: int):
+    conn = get_db_connection()
+    if not conn: raise HTTPException(status_code=500, detail="Database Offline")
+    cur = conn.cursor()
+    
+    query = "DELETE FROM public.parking_locations WHERE id = %s;"
+    try:
+        cur.execute(query, (parkir_id,))
+        
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Data parkir tidak ditemukan")
+            
+        conn.commit()
+        return {"status": "Sukses", "message": f"Data parkir ID {parkir_id} berhasil dihapus"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()

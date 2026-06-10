@@ -9,7 +9,7 @@
 Proyek ini dikembangkan oleh mahasiswa **Teknik Informatika — Institut Teknologi Sumatera (ITERA)** Angkatan 2023.
 
 | Nama | NIM |
-|---|---|---|
+|---|---|
 | M. Zahran Dhiyaul Haq | 123140120 |
 | M. Daffansyah Desuandi | 123140127 |
 | Falih Faiq Fadhlurrahman | 123140129 |
